@@ -81,6 +81,8 @@ The current local review-rule families and their limitations are documented in [
 
 The committed [sample analysis report](./docs/SAMPLE_ANALYSIS_REPORT.md) shows Burp XML and HAR output generated from fully sanitized local examples. It illustrates review leads only and does not describe a real target or confirmed vulnerability.
 
+The release setup is explained in [`docs/RELEASE.md`](./docs/RELEASE.md). The optional static cyber-neon preview is available in [`docs/preview/index.html`](./docs/preview/index.html); it can be opened directly from the repository or served from the `docs/preview` folder locally.
+
 Release notes are maintained in [`CHANGELOG.md`](./CHANGELOG.md). The current feature release is **0.2.0**.
 
 ## Security

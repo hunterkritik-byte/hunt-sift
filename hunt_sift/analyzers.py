@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .core.http_review import parse_raw_http_headers
 from .core.models import Lead
-from .parsers import burp_xml, har, http_export, nmap_xml, static_files
+from .parsers import burp_xml, har, http_export, nmap_xml, s3_policy, static_files
 
 
 def analyze_nmap_xml(path: Path) -> list[Lead]:
@@ -27,6 +27,10 @@ def analyze_har(path: Path) -> list[Lead]:
 
 def analyze_static_path(path: Path) -> list[Lead]:
     return static_files.analyze(path)
+
+
+def analyze_s3_policy(path: Path) -> list[Lead]:
+    return s3_policy.analyze(path)
 
 
 def parse_http_headers(text: str) -> tuple[str, dict[str, list[str]]]:

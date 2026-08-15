@@ -10,3 +10,8 @@
 - [x] Create a comprehensive user manual and cross-platform installation helper.
 - [x] Add pattern rules with regression tests and sanitized analysis fixtures.
 - [x] Generate Burp XML and HAR sample reports, validate the release, and push the update.
+- [x] Initialize and validate a reusable offline security-artifact development skill.
+- [x] Add cautious local JWT and S3 public-access review rules with regression tests.
+- [x] Add a tag-triggered package and release workflow without publishing credentials.
+- [x] Create and preview a cyber-neon HTML documentation experience.
+- [x] Validate and push the completed Hunt Sift update.

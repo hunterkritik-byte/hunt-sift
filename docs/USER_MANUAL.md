@@ -62,15 +62,19 @@ The CORS rules are deliberately conservative. `Access-Control-Allow-Origin: *` i
 
 ## 6. Static-file pattern review
 
-The static analyzer reads text without executing it. It can flag dynamic code patterns, DOM sink assignments, debug settings, TODO markers, HTTP URLs, CORS configuration strings, and potential credential-shaped values. It skips common generated directories such as `.git`, `.venv`, `node_modules`, `dist`, and `build`.
+The static analyzer reads text without executing it. It can flag dynamic code patterns, DOM sink assignments, debug settings, TODO markers, HTTP URLs, CORS configuration strings, JWT configuration cues, and potential credential-shaped values. It skips common generated directories such as `.git`, `.venv`, `node_modules`, `dist`, and `build`.
 
 Potential credential results are redacted in output. Hunt Sift shows a short prefix and suffix only; it does not print the full matched value. Always rotate or revoke a real secret through the system owner’s approved process. Do not place secrets into public reports, issues, or screenshots.
 
-## 7. Data handling
+## 7. JWT and S3 policy review
+
+JWT rules review only the selected source text. Decode calls, explicit expiration settings, and a `none` algorithm configuration are contextual code-review cues; Hunt Sift does not parse a user token, create a replacement token, verify a signature, or contact an authentication service. The `s3` command reads only a saved policy JSON file and flags wildcard-principal read or write statements as configuration review leads. It does not list buckets, query cloud APIs, upload an object, or verify public access.
+
+## 8. Data handling
 
 Hunt Sift reads files up to 2 MB and never uploads them. The CLI does not store a workspace, send telemetry, use a network client, invoke a browser, or create a connection to an address in any imported artifact. Keep your artifact folders encrypted or access-controlled if they contain sensitive authorized material.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Situation | Check |
 | --- | --- |
@@ -80,6 +84,6 @@ Hunt Sift reads files up to 2 MB and never uploads them. The CLI does not store 
 | Too many static results | Run `static` against a smaller source subdirectory or targeted file. |
 | A potential credential is flagged | Verify that it is not an example, placeholder, or public key. Never publish the full value. |
 
-## 9. Contributing safely
+## 10. Contributing safely
 
 Every new parser must operate on an explicit local file and include a local fixture-style test. Do not add scanning, request replay, target discovery, credential storage, browser automation, exploit generation, code execution, or automatic report submission. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`RULES.md`](./RULES.md) for the maintained boundaries.

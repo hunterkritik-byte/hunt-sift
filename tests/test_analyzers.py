@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from hunt_sift.analyzers import analyze_burp_xml, analyze_har, analyze_http_export, analyze_nmap_xml, analyze_static_path
+from hunt_sift.analyzers import analyze_burp_xml, analyze_har, analyze_http_export, analyze_nmap_xml, analyze_s3_policy, analyze_static_path
 
 
 class AnalyzerTests(unittest.TestCase):
@@ -79,6 +79,33 @@ class AnalyzerTests(unittest.TestCase):
             credential = next(lead for lead in leads if lead.category == "potential-credential-exposure")
             self.assertNotIn(possible_key, credential.evidence)
             self.assertIn("AIza…", credential.evidence)
+
+    def test_static_jwt_rules_are_review_leads_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            source = Path(tempdir) / "auth.js"
+            source.write_text(
+                "const parsed = jwt.decode(token); const settings = { ignoreExpiration: true }; const jwt_secret = 'local-signed-value-only';\n",
+                encoding="utf-8",
+            )
+            leads = analyze_static_path(source)
+            categories = {lead.category for lead in leads}
+            self.assertIn("jwt-validation-review", categories)
+            self.assertIn("jwt-claim-validation-review", categories)
+            credential = next(lead for lead in leads if lead.category == "potential-credential-exposure")
+            self.assertNotIn("local-signed-value-only", credential.evidence)
+            self.assertTrue(all("local-signed-value-only" not in lead.evidence for lead in leads))
+
+    def test_s3_policy_review_never_contacts_cloud(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            policy = Path(tempdir) / "policy.json"
+            policy.write_text(
+                """{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject","s3:PutObject"],"Resource":"arn:aws:s3:::example-bucket/*"}]}""",
+                encoding="utf-8",
+            )
+            leads = analyze_s3_policy(policy)
+            categories = {lead.category for lead in leads}
+            self.assertIn("s3-public-read-policy-review", categories)
+            self.assertIn("s3-public-write-policy-review", categories)
 
 
 if __name__ == "__main__":

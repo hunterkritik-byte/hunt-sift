@@ -17,10 +17,13 @@ STATIC_RULES = (
     (re.compile(r"http://[^\s'\"<>]+", re.IGNORECASE), "mixed-content-review", "Found an HTTP URL in a static file.", "Check the actual runtime context before concluding there is a mixed-content or transport issue."),
     (re.compile(r"access-control-allow-origin[\"']?\s*[:=]\s*[\"']?\*", re.IGNORECASE), "cors-policy-review", "Found a wildcard Access-Control-Allow-Origin configuration string.", "Confirm the served response, sensitivity of the resource, and authorization before making any cross-origin security claim."),
     (re.compile(r"(?is)\bcors\s*\(\s*\{(?=[^}]{0,300}\borigin\s*:\s*true)(?=[^}]{0,300}\bcredentials\s*:\s*true)[^}]{0,300}\}"), "cors-policy-review", "Found a CORS middleware configuration that appears to allow reflected origins with credentials.", "Review the exact framework behavior and protected response context. A source pattern alone does not establish cross-origin impact."),
+    (re.compile(r"(?i)\bjwt\.decode\s*\("), "jwt-validation-review", "Found a JWT decode call in a static file.", "Review whether this call is used only for non-security UI data or whether a verified token is required before authorization decisions."),
+    (re.compile(r"(?i)\b(?:ignoreexpiration|verifyexpiration)\s*[:=]\s*(?:true|false)"), "jwt-claim-validation-review", "Found an explicit JWT expiration-validation configuration.", "Review the library semantics and the surrounding authentication flow. This configuration alone does not show acceptance of an expired token."),
+    (re.compile(r"(?is)\b(?:jwt\.)?(?:sign|encode)\s*\([^;]{0,500}\b(?:algorithm|alg)\s*[:=]\s*[\"']none[\"']"), "jwt-algorithm-review", "Found a JWT creation configuration using algorithm 'none'.", "Review whether this value can reach a deployed authentication flow. Do not forge or submit tokens; verify authorization and impact through an approved process."),
 )
 
 NAMED_CREDENTIAL = re.compile(
-    r"(?ix)\b(?P<name>api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|secret(?:[_-]?key)?|private[_-]?key)\b\s*[:=]\s*[\"'](?P<value>[^\"'\r\n]{12,})[\"']"
+    r"(?ix)\b(?P<name>api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|jwt[_-]?secret|secret(?:[_-]?key)?|private[_-]?key)\b\s*[:=]\s*[\"'](?P<value>[^\"'\r\n]{12,})[\"']"
 )
 TOKEN_SHAPED_CREDENTIAL = re.compile(
     r"\b(?P<value>(?:AIza[0-9A-Za-z_-]{20,}|AKIA[0-9A-Z]{16}|ghp_[0-9A-Za-z]{20,}|github_pat_[0-9A-Za-z_]{20,}|xox[baprs]-[0-9A-Za-z-]{16,}))\b"
@@ -30,6 +33,16 @@ TOKEN_SHAPED_CREDENTIAL = re.compile(
 def line_and_excerpt(text: str, index: int) -> tuple[int, str]:
     """Find a local line number without returning the full line contents."""
     return text[:index].count("\n") + 1, ""
+
+
+def safe_excerpt(line: str) -> str:
+    """Redact potential credentials before a generic static-rule excerpt is rendered."""
+    result = line
+    for pattern in (NAMED_CREDENTIAL, TOKEN_SHAPED_CREDENTIAL):
+        for match in reversed(list(pattern.finditer(result))):
+            value = match.group("value")
+            result = result[: match.start("value")] + redact(value) + result[match.end("value") :]
+    return result[:180]
 
 
 def credential_leads(file_path: Path, text: str) -> list[Lead]:
@@ -72,7 +85,7 @@ def analyze(path: Path) -> list[Lead]:
             if not match:
                 continue
             line_number = text[: match.start()].count("\n") + 1
-            snippet = text.splitlines()[line_number - 1].strip()[:180]
+            snippet = safe_excerpt(text.splitlines()[line_number - 1].strip())
             leads.append(Lead("static-file", category, "review" if category != "implementation-note" else "informational", message, f"{file_path}:{line_number}: {snippet}", guidance))
         leads.extend(credential_leads(file_path, text))
     return leads

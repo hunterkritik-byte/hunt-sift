@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from .core.render import render_leads
-from .parsers import burp_xml, har, http_export, nmap_xml, static_files
+from .parsers import burp_xml, har, http_export, nmap_xml, s3_policy, static_files
 
 
 def local_path(value: str) -> Path:
@@ -20,7 +20,7 @@ def local_path(value: str) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="hunt-sift",
-        description="Offline-only review of local Nmap XML, Burp XML, HAR, HTTP exports, and static files. No scanning, network, or execution features.",
+        description="Offline-only review of local Nmap XML, Burp XML, HAR, HTTP exports, S3 policy JSON, and static files. No scanning, network, or execution features.",
     )
     parser.add_argument("--json", action="store_true", help="Print structured JSON rather than readable text.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("burp", "Analyze a previously exported local Burp Suite XML file."),
         ("har", "Analyze a previously saved HTTP Archive (HAR) file."),
         ("http", "Analyze a previously saved raw HTTP response file."),
+        ("s3", "Analyze a previously exported S3-style bucket policy JSON file."),
         ("static", "Review a selected local file or directory with non-executing pattern checks."),
     ):
         command = commands.add_parser(name, help=help_text)
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
             "burp": burp_xml.analyze,
             "har": har.analyze,
             "static": static_files.analyze,
+            "s3": s3_policy.analyze,
         }
         if args.command == "http":
             leads = http_export.analyze(args.input, args.url)

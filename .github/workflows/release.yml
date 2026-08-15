@@ -1,0 +1,73 @@
+name: Release Hunt Sift
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Test and build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline parser tests
+        run: python -m unittest discover -s tests -v
+      - name: Build source and wheel distributions
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Store distributions for release jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+          if-no-files-found: error
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: test-and-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+      - name: Create release and attach distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/* --generate-notes --title "Hunt Sift ${{ github.ref_name }}"
+
+  publish-pypi:
+    name: Publish to PyPI using trusted publishing
+    needs: test-and-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hunt-sift
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+      - name: Publish package distribution
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
