@@ -1,0 +1,4 @@
+- [x] Define offline-only inputs and explicitly exclude live scanning, request replay, execution, and exploitation.
+- [x] Create a standard-library Python CLI scaffold.
+- [x] Implement and test imported Nmap XML, HTTP export, and static-file analyzers.
+- [x] Document safe usage and push the private repository.

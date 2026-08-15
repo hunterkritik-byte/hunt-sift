@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hunt-sift"
+version = "0.1.0"
+description = "Offline-only security artifact analysis for authorized research workflows."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Kritik Bhattarai" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+hunt-sift = "hunt_sift.cli:main"
+
+[tool.setuptools]
+packages = ["hunt_sift"]
