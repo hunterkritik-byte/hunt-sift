@@ -107,6 +107,21 @@ def review_headers(source: str, target: str, status: str, headers: Mapping[str, 
                 "Review whether a sensitive unauthenticated response is readable cross-origin. Wildcard CORS alone does not establish impact.",
             )
         )
+    if (
+        "access-control-allow-origin" in normalized
+        and "*" in normalized["access-control-allow-origin"]
+        and any(value.lower() == "true" for value in normalized.get("access-control-allow-credentials", []))
+    ):
+        leads.append(
+            Lead(
+                source,
+                "cors-credentials-policy-review",
+                "review",
+                "The imported response combines wildcard CORS with Access-Control-Allow-Credentials: true.",
+                evidence_base,
+                "Review the deployment configuration and browser behavior in an authorized context. This header combination alone is not a confirmed cross-origin data exposure.",
+            )
+        )
     for exposed in ("server", "x-powered-by"):
         if exposed in normalized:
             leads.append(

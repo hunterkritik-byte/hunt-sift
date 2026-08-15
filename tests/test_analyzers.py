@@ -46,13 +46,14 @@ class AnalyzerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             export = Path(tempdir) / "capture.har"
             export.write_text(
-                """{"log":{"entries":[{"request":{"url":"https://api.example.test/v1/profile?account=masked"},"response":{"status":500,"headers":[{"name":"Server","value":"Demo"},{"name":"Set-Cookie","value":"session=demo"}]}}]}}""",
+                """{"log":{"entries":[{"request":{"url":"https://api.example.test/v1/profile?account=masked"},"response":{"status":500,"headers":[{"name":"Server","value":"Demo"},{"name":"Set-Cookie","value":"session=demo"},{"name":"Access-Control-Allow-Origin","value":"*"},{"name":"Access-Control-Allow-Credentials","value":"true"}]}}]}}""",
                 encoding="utf-8",
             )
             leads = analyze_har(export)
             categories = {lead.category for lead in leads}
             self.assertIn("server-error-review", categories)
             self.assertIn("cookie-attribute-review", categories)
+            self.assertIn("cors-credentials-policy-review", categories)
             self.assertTrue(all("account=masked" not in lead.evidence for lead in leads))
 
     def test_static_review_never_executes_source(self) -> None:
@@ -63,6 +64,21 @@ class AnalyzerTests(unittest.TestCase):
             categories = {lead.category for lead in leads}
             self.assertIn("dom-sink-review", categories)
             self.assertIn("implementation-note", categories)
+
+    def test_static_cors_and_potential_credential_rules_redact_the_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            source = Path(tempdir) / "config.js"
+            possible_key = "AIzaSyDUMMYKEYWITHMORETHAN20CHARS"
+            source.write_text(
+                f"const headers = {{ 'Access-Control-Allow-Origin': '*' }}; const api_key = '{possible_key}';\n",
+                encoding="utf-8",
+            )
+            leads = analyze_static_path(source)
+            categories = {lead.category for lead in leads}
+            self.assertIn("cors-policy-review", categories)
+            credential = next(lead for lead in leads if lead.category == "potential-credential-exposure")
+            self.assertNotIn(possible_key, credential.evidence)
+            self.assertIn("AIza…", credential.evidence)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,9 @@
     <response><![CDATA[HTTP/1.1 200 OK
 Server: Example
 Content-Type: text/html
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+Set-Cookie: session=demo
 
 <html>Sanitized example only.</html>]]></response>
   </item>

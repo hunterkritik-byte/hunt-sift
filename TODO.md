@@ -6,3 +6,7 @@
 - [x] Reorganize the parser and reporting code into maintainable modules.
 - [x] Add safe Burp XML and HAR review rules with fixture-based tests.
 - [x] Update documentation, validate the enhanced release, and push it to GitHub.
+- [x] Define safe local-only rules for CORS and potential exposed credential patterns.
+- [x] Create a comprehensive user manual and cross-platform installation helper.
+- [x] Add pattern rules with regression tests and sanitized analysis fixtures.
+- [x] Generate Burp XML and HAR sample reports, validate the release, and push the update.

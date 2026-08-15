@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 — Researcher onboarding and cautious pattern review
+
+This release adds a comprehensive user manual, a POSIX installer, a Windows PowerShell installer, a documented local review-rule catalog, and a sanitized Burp XML/HAR sample analysis report. The static-file analyzer now flags cautious CORS configuration cues and potential credential-shaped values while redacting the matched value in output. Imported response analysis also highlights the wildcard CORS plus credentialed-response configuration as a contextual review lead.
+
 ## 0.2.0 — Offline artifact expansion
 
 This release adds local-only parsers for Burp Suite XML and HTTP Archive (HAR) exports. The command-line interface now accepts `burp` and `har` subcommands alongside Nmap XML, raw HTTP response, and static-file review.

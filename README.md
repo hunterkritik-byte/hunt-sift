@@ -25,6 +25,8 @@ python3 -m venv .venv
 python3 -m pip install -e .
 ```
 
+For a guided cross-platform local install, use `./scripts/install.sh` on Linux or macOS, or `.\scripts\install.ps1` in Windows PowerShell. The full setup, workflow, output interpretation, troubleshooting, and safety guidance are in [`docs/USER_MANUAL.md`](./docs/USER_MANUAL.md).
+
 ## Examples
 
 Analyze an existing Nmap XML export without launching Nmap.
@@ -74,6 +76,10 @@ python3 -m unittest discover -s tests -v
 Hunt Sift is designed as an evidence-review companion, not a live testing tool. Ensure the artifacts and targets are authorized for your use, avoid handling data that you are not permitted to access, and apply the rules of the relevant program before submitting a report.
 
 The modular design, local data handling, and contribution boundary are documented in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md). Try the wholly fictitious local files in [`examples/`](./examples/) to see the command syntax.
+
+The current local review-rule families and their limitations are documented in [`docs/RULES.md`](./docs/RULES.md).
+
+The committed [sample analysis report](./docs/SAMPLE_ANALYSIS_REPORT.md) shows Burp XML and HAR output generated from fully sanitized local examples. It illustrates review leads only and does not describe a real target or confirmed vulnerability.
 
 Release notes are maintained in [`CHANGELOG.md`](./CHANGELOG.md). The current feature release is **0.2.0**.
 
