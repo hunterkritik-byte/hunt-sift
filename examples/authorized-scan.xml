@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<nmaprun>
+  <host>
+    <address addr="192.0.2.40" addrtype="ipv4" />
+    <ports>
+      <port protocol="tcp" portid="80"><state state="open" /><service name="http" product="Example Server" version="1.0" /></port>
+    </ports>
+  </host>
+</nmaprun>

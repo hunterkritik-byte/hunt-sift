@@ -7,6 +7,8 @@
 | Command | Local input | What it does |
 | --- | --- | --- |
 | `hunt-sift nmap` | Previously exported Nmap XML | Summarizes open-service inventory cues and flags legacy-service or transport-review leads. |
+| `hunt-sift burp` | Previously exported Burp Suite XML | Reads saved response metadata from an export and applies the same cautious local header-review rules. |
+| `hunt-sift har` | A saved HTTP Archive (HAR) file | Reviews saved response headers and status metadata from local HAR entries. |
 | `hunt-sift http` | A saved raw HTTP response | Reviews response-hardening, cookie-attribute, CORS, and technology-metadata cues. |
 | `hunt-sift static` | A local source file or directory | Finds a few non-executing code-review cues such as `eval`, `innerHTML`, `debug=true`, TODOs, and HTTP URLs. |
 | `hunt-sift boundaries` | No input | Prints the tool's offline-only operating limits. |
@@ -37,6 +39,18 @@ Review a saved raw HTTP response without connecting to the URL.
 hunt-sift http --input ./exports/response.txt --url https://app.example.test
 ```
 
+Review an exported Burp Suite XML file. Hunt Sift does not open Burp Suite or replay the captured traffic.
+
+```bash
+hunt-sift burp --input ./exports/captured-items.xml
+```
+
+Review a local HAR file. Query strings and fragments are removed from the output labels.
+
+```bash
+hunt-sift har --input ./exports/captured-session.har
+```
+
 Inspect selected local source files without executing them.
 
 ```bash
@@ -58,6 +72,10 @@ python3 -m unittest discover -s tests -v
 ## Safety and scope
 
 Hunt Sift is designed as an evidence-review companion, not a live testing tool. Ensure the artifacts and targets are authorized for your use, avoid handling data that you are not permitted to access, and apply the rules of the relevant program before submitting a report.
+
+The modular design, local data handling, and contribution boundary are documented in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md). Try the wholly fictitious local files in [`examples/`](./examples/) to see the command syntax.
+
+Release notes are maintained in [`CHANGELOG.md`](./CHANGELOG.md). The current feature release is **0.2.0**.
 
 ## Security
 

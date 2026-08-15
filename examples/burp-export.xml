@@ -1,0 +1,10 @@
+<items>
+  <item>
+    <url>https://app.example.test/profile?demo=masked</url>
+    <response><![CDATA[HTTP/1.1 200 OK
+Server: Example
+Content-Type: text/html
+
+<html>Sanitized example only.</html>]]></response>
+  </item>
+</items>

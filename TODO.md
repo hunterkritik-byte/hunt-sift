@@ -2,3 +2,7 @@
 - [x] Create a standard-library Python CLI scaffold.
 - [x] Implement and test imported Nmap XML, HTTP export, and static-file analyzers.
 - [x] Document safe usage and push the private repository.
+- [x] Define offline-only Burp Suite XML and HAR import boundaries.
+- [x] Reorganize the parser and reporting code into maintainable modules.
+- [x] Add safe Burp XML and HAR review rules with fixture-based tests.
+- [x] Update documentation, validate the enhanced release, and push it to GitHub.

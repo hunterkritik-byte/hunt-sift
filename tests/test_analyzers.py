@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from hunt_sift.analyzers import analyze_http_export, analyze_nmap_xml, analyze_static_path
+from hunt_sift.analyzers import analyze_burp_xml, analyze_har, analyze_http_export, analyze_nmap_xml, analyze_static_path
 
 
 class AnalyzerTests(unittest.TestCase):
@@ -29,6 +29,31 @@ class AnalyzerTests(unittest.TestCase):
             categories = {lead.category for lead in leads}
             self.assertIn("cors-policy-review", categories)
             self.assertIn("cookie-attribute-review", categories)
+
+    def test_burp_xml_import_redacts_url_query_and_reviews_response(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            export = Path(tempdir) / "burp.xml"
+            export.write_text(
+                """<items><item><url>https://app.example.test/account?private=redacted</url><response><![CDATA[HTTP/1.1 200 OK\nServer: Demo\nAccess-Control-Allow-Origin: *\n\nbody]]></response></item></items>""",
+                encoding="utf-8",
+            )
+            leads = analyze_burp_xml(export)
+            self.assertTrue(any(lead.source == "burp-xml" for lead in leads))
+            self.assertIn("cors-policy-review", {lead.category for lead in leads})
+            self.assertTrue(all("private=redacted" not in lead.evidence for lead in leads))
+
+    def test_har_import_reviews_saved_headers_without_a_request(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            export = Path(tempdir) / "capture.har"
+            export.write_text(
+                """{"log":{"entries":[{"request":{"url":"https://api.example.test/v1/profile?account=masked"},"response":{"status":500,"headers":[{"name":"Server","value":"Demo"},{"name":"Set-Cookie","value":"session=demo"}]}}]}}""",
+                encoding="utf-8",
+            )
+            leads = analyze_har(export)
+            categories = {lead.category for lead in leads}
+            self.assertIn("server-error-review", categories)
+            self.assertIn("cookie-attribute-review", categories)
+            self.assertTrue(all("account=masked" not in lead.evidence for lead in leads))
 
     def test_static_review_never_executes_source(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
