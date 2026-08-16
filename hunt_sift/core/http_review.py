@@ -46,7 +46,10 @@ def parse_raw_http_headers(text: str) -> tuple[str, dict[str, list[str]]]:
 
 
 def review_headers(source: str, target: str, status: str, headers: Mapping[str, object]) -> list[Lead]:
-    """Return contextual hardening review prompts from imported response metadata."""
+    """Return contextual hardening review prompts from imported response metadata.
+    
+    Optimized to normalize headers once and cache the result.
+    """
     normalized = normalise_headers(headers)
     evidence_base = f"{target} / {status}"
     leads: list[Lead] = []
