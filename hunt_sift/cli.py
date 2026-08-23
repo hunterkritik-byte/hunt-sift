@@ -13,6 +13,10 @@ from .core.request_review import analyze_request, safe_test_templates
 from .core.source_review import analyze_source
 from .core.workspace import index_directory, write_index
 from .core.io import read_text
+from .core.jwt_review import analyze_jwt
+from .core.graphql_review import analyze_graphql
+from .core.openapi_review import analyze_openapi
+from .core.secrets_review import analyze_secrets
 from .parsers import burp_xml, har, http_export, nmap_xml, s3_policy, static_files
 
 
@@ -24,12 +28,9 @@ def local_path(value: str) -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="hunt-sift",
-        description="Offline security workbench for researcher-supplied artifacts. No scanning, replay, execution, or network access.",
-    )
+    parser = argparse.ArgumentParser(prog="hunt-sift", description="Offline security workbench for researcher-supplied artifacts. No scanning, replay, execution, or network access.")
     parser.add_argument("--json", action="store_true", help="Print structured JSON where supported.")
-    commands = commands = parser.add_subparsers(dest="command", required=True)
+    commands = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (
         ("nmap", "Analyze a previously exported Nmap XML file."),
         ("burp", "Analyze a previously exported Burp Suite XML file."),
@@ -39,6 +40,10 @@ def build_parser() -> argparse.ArgumentParser:
         ("s3", "Analyze a previously exported S3-style bucket policy JSON file."),
         ("static", "Review local source with non-executing pattern checks."),
         ("source", "Analyze source or JavaScript with non-executing security rules."),
+        ("jwt", "Decode and review a locally supplied JWT without verifying or transmitting it."),
+        ("graphql", "Review a saved GraphQL request/query for security configuration cues."),
+        ("openapi", "Review a saved OpenAPI/Swagger JSON specification."),
+        ("secrets", "Scan local text for secret-like patterns with mandatory redaction."),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--input", required=True, type=local_path)
@@ -106,6 +111,14 @@ def main(argv: list[str] | None = None) -> int:
             leads = analyze_request(read_text(args.input))
         elif args.command == "source":
             leads = analyze_source(read_text(args.input), str(args.input))
+        elif args.command == "jwt":
+            leads = analyze_jwt(read_text(args.input))
+        elif args.command == "graphql":
+            leads = analyze_graphql(read_text(args.input))
+        elif args.command == "openapi":
+            leads = analyze_openapi(read_text(args.input))
+        elif args.command == "secrets":
+            leads = analyze_secrets(read_text(args.input), str(args.input))
         elif args.command == "test-templates":
             payload = safe_test_templates(read_text(args.input))
             print(json.dumps(payload, indent=2) if args.json else "\n".join(f"{item['class']}: {item['template']}" for item in payload) or "No manual-review templates generated.")
