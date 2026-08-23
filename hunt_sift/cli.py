@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 
 from .core.render import render_leads
+from .core.request_review import analyze_request, safe_test_templates
+from .core.source_review import analyze_source
 from .core.workspace import index_directory, write_index
+from .core.io import read_text
 from .parsers import burp_xml, har, http_export, nmap_xml, s3_policy, static_files
 
 
@@ -22,11 +25,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hunt-sift", description="Offline security workbench for researcher-supplied artifacts. No scanning, replay, execution, or network access.")
     parser.add_argument("--json", action="store_true", help="Print structured JSON where supported.")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name, help_text in (("nmap", "Analyze a previously exported Nmap XML file."),("burp", "Analyze a previously exported Burp Suite XML file."),("har", "Analyze a previously saved HTTP Archive (HAR) file."),("http", "Analyze a previously saved raw HTTP response."),("s3", "Analyze a previously exported S3-style bucket policy JSON file."),("static", "Review local source with non-executing pattern checks.")):
+    for name, help_text in (("nmap", "Analyze a previously exported Nmap XML file."),("burp", "Analyze a previously exported Burp Suite XML file."),("har", "Analyze a previously saved HTTP Archive (HAR) file."),("http", "Analyze a previously saved raw HTTP response."),("request", "Analyze a previously saved raw HTTP request."),("s3", "Analyze a previously exported S3-style bucket policy JSON file."),("static", "Review local source with non-executing pattern checks."),("source", "Analyze source or JavaScript with non-executing security rules.")):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--input", required=True, type=local_path)
         if name == "http":
             command.add_argument("--url", help="Optional original URL used only as a local label; it is never requested.")
+    templates = commands.add_parser("test-templates", help="Generate inert manual-review templates from a saved HTTP request.")
+    templates.add_argument("--input", required=True, type=local_path)
     inventory = commands.add_parser("inventory", help="Build a local project index with SHA-256 fingerprints.")
     inventory.add_argument("--input", required=True, type=local_path)
     inventory.add_argument("--output", help="Optional JSON index path.")
@@ -56,15 +61,24 @@ def main(argv: list[str] | None = None) -> int:
             rows = [row for row in data if needle in str(row.get("path", "")).casefold() or needle in str(row.get("kind", "")).casefold()]
             print(json.dumps(rows, indent=2) if args.json else "\n".join(f"{row.get('kind','other'):12} {row.get('path','')}" for row in rows) or "No matching artifacts.")
             return 0
-        analyzers = {"nmap": nmap_xml.analyze, "burp": burp_xml.analyze, "har": har.analyze, "static": static_files.analyze, "s3": s3_policy.analyze}
-        if args.command == "http":
-            leads = http_export.analyze(args.input, args.url)
-        elif args.command in analyzers:
-            leads = analyzers[args.command](args.input)
-        else:
-            print("Hunt Sift only reads researcher-supplied local artifacts. It does not scan, discover targets, replay requests, execute files, generate payloads, store credentials, or contact networks.")
+        if args.command == "request":
+            leads = analyze_request(read_text(args.input))
+        elif args.command == "source":
+            leads = analyze_source(read_text(args.input), str(args.input))
+        elif args.command == "test-templates":
+            payload = safe_test_templates(read_text(args.input))
+            print(json.dumps(payload, indent=2) if args.json else "\n".join(f"{item['class']}: {item['template']}" for item in payload) or "No manual-review templates generated.")
             return 0
-    except (ValueError, OSError) as error:
+        else:
+            analyzers = {"nmap": nmap_xml.analyze, "burp": burp_xml.analyze, "har": har.analyze, "static": static_files.analyze, "s3": s3_policy.analyze}
+            if args.command == "http":
+                leads = http_export.analyze(args.input, args.url)
+            elif args.command in analyzers:
+                leads = analyzers[args.command](args.input)
+            else:
+                print("Hunt Sift only reads researcher-supplied local artifacts. It does not scan, discover targets, replay requests, execute files, generate exploit payloads, store credentials, or contact networks.")
+                return 0
+    except (ValueError, OSError, json.JSONDecodeError) as error:
         print(f"Input error: {error}")
         return 2
     print(render_leads(leads, args.json))
