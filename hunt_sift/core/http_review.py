@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from urllib.parse import urlsplit, urlunsplit
 
 from .models import Lead
@@ -18,11 +18,20 @@ def label_url(raw_url: str) -> str:
 
 
 def normalise_headers(headers: Mapping[str, object]) -> dict[str, list[str]]:
-    """Normalise imported headers to lower-case keys and string value lists."""
+    """Normalise imported headers to lower-case keys and string value lists.
+
+    Mapping adapters may provide repeated header values as tuples or other
+    non-string sequences. Treat those like lists instead of stringifying the
+    whole container, which previously caused security-header rules to miss
+    conflicting values.
+    """
     result: dict[str, list[str]] = {}
     for name, value in headers.items():
         key = str(name).strip().lower()
-        values = value if isinstance(value, list) else [value]
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            values = value
+        else:
+            values = [value]
         result.setdefault(key, []).extend(str(item).strip() for item in values)
     return result
 
@@ -46,10 +55,7 @@ def parse_raw_http_headers(text: str) -> tuple[str, dict[str, list[str]]]:
 
 
 def review_headers(source: str, target: str, status: str, headers: Mapping[str, object]) -> list[Lead]:
-    """Return contextual hardening review prompts from imported response metadata.
-
-    Optimized to normalize headers once and cache the result.
-    """
+    """Return contextual hardening review prompts from imported response metadata."""
     normalized = normalise_headers(headers)
     evidence_base = f"{target} / {status}"
     leads: list[Lead] = []
@@ -74,10 +80,6 @@ def review_headers(source: str, target: str, status: str, headers: Mapping[str, 
         if name not in normalized:
             leads.append(Lead(source, "response-hardening-review", "review", message, evidence_base, guidance))
 
-    # Duplicate security-sensitive headers with conflicting values can create
-    # parser/browser disagreement and should be reviewed rather than treated as
-    # a confirmed vulnerability. Keep this rule limited to headers whose
-    # semantics are commonly security-sensitive and redact the values in evidence.
     singleton_security_headers = (
         "content-security-policy",
         "strict-transport-security",
@@ -123,8 +125,8 @@ def review_headers(source: str, target: str, status: str, headers: Mapping[str, 
                     "cookie-attribute-review",
                     "review",
                     f"An imported Set-Cookie value lacks: {', '.join(missing)}.",
-                    f"{evidence_base}; Set-Cookie: {cookie[:160]}",
-                    "Confirm cookie purpose, transport requirements, and program impact standards without using other users' data.",
+                    f"{evidence_base}; Set-Cookie: <value redacted>",
+                    "Confirm cookie purpose, transport requirements, and program impact standards without exposing cookie values.",
                 )
             )
     if "access-control-allow-origin" in normalized and "*" in normalized["access-control-allow-origin"]:
