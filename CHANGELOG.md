@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.2 — Header analysis hardening and privacy fixes
+
+### Bug fixes
+- Fixed normalization of repeated HTTP header values supplied as tuples and other sequences. Previously, non-list sequences could be stringified as one value, causing conflicting security-header checks to miss real differences.
+- Redacted imported `Set-Cookie` values from review evidence so session/token-like cookie contents are not copied into generated findings.
+
+### Enhancements
+- Added regression coverage for sequence-valued headers, conflicting security headers, cookie redaction, and scalar-header compatibility.
+- Standardized package metadata and runtime version to `1.0.2`.
+
+All analysis remains offline-only and treats configuration findings as contextual review leads rather than automatic vulnerability claims.
+
 ## 0.5.0 — Security-header ambiguity review
 
 This release adds a cautious review lead for conflicting values in security-sensitive HTTP response headers such as Content-Security-Policy, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and CORS headers. The rule is offline-only, redacts header values from evidence, and treats ambiguity as a review prompt rather than a confirmed vulnerability. Tests cover detection and redaction.
