@@ -47,7 +47,7 @@ def parse_raw_http_headers(text: str) -> tuple[str, dict[str, list[str]]]:
 
 def review_headers(source: str, target: str, status: str, headers: Mapping[str, object]) -> list[Lead]:
     """Return contextual hardening review prompts from imported response metadata.
-    
+
     Optimized to normalize headers once and cache the result.
     """
     normalized = normalise_headers(headers)
@@ -73,6 +73,34 @@ def review_headers(source: str, target: str, status: str, headers: Mapping[str, 
     for name, message, guidance in expected:
         if name not in normalized:
             leads.append(Lead(source, "response-hardening-review", "review", message, evidence_base, guidance))
+
+    # Duplicate security-sensitive headers with conflicting values can create
+    # parser/browser disagreement and should be reviewed rather than treated as
+    # a confirmed vulnerability. Keep this rule limited to headers whose
+    # semantics are commonly security-sensitive and redact the values in evidence.
+    singleton_security_headers = (
+        "content-security-policy",
+        "strict-transport-security",
+        "x-content-type-options",
+        "x-frame-options",
+        "referrer-policy",
+        "access-control-allow-origin",
+        "access-control-allow-credentials",
+    )
+    for name in singleton_security_headers:
+        values = normalized.get(name, [])
+        unique_values = {value.lower() for value in values}
+        if len(unique_values) > 1:
+            leads.append(
+                Lead(
+                    source,
+                    "conflicting-security-header-review",
+                    "review",
+                    f"The imported response contains conflicting values for {name}.",
+                    f"{evidence_base}; {name}: <{len(unique_values)} distinct values redacted>",
+                    "Determine how the deployed server, intermediary, and browser interpret repeated security headers. Do not assume duplicate or conflicting values are exploitable without demonstrating a concrete security impact.",
+                )
+            )
 
     if target.lower().startswith("https://") and "strict-transport-security" not in normalized:
         leads.append(
