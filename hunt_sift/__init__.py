@@ -1,3 +1,3 @@
 """Hunt Sift: offline-first security artifact workbench."""
 
-__version__ = "1.4.0"
+__version__ = "2.1.23"
