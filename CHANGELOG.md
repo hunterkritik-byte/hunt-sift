@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.0 — Passive attack-surface intelligence
+
+### Enhancements
+- Added offline HTTP response differential analysis for saved before/after artifacts.
+- Added endpoint mapping that deduplicates methods and paths while collecting parameter names.
+- Added parameter mining with identity, authorization, redirect, file, query, and sensitive-field classifications.
+- Added `diff`, `endpoints`, and `params` CLI commands with JSON output support.
+- Added regression tests for sensitive-header redaction, endpoint deduplication, and parameter classification.
+- Bumped package/runtime version to `1.4.0`.
+
+The new features are passive and artifact-driven. They do not scan, replay requests, execute files, or generate exploit payloads.
+
 ## 1.2.0 — Request and source security review
 
 ### Enhancements
@@ -19,23 +31,12 @@ The tool remains offline-only. Findings are contextual review leads, not automat
 - Added structured inventory JSON output and workbench documentation.
 - Fixed setuptools package discovery so `hunt_sift.*` subpackages are included in builds.
 
-### Regression coverage
-- Added workspace tests for ignored generated directories, deterministic hashes, metadata search, and JSON round trips.
-
-The workbench remains offline-only: no scanning, network access, request replay, target discovery, execution, or exploit-payload generation.
-
 ## 1.0.2 — Header analysis hardening and privacy fixes
 
 ### Bug fixes
 - Fixed normalization of repeated HTTP header values supplied as tuples and other sequences.
 - Redacted imported `Set-Cookie` values from review evidence.
 
-### Enhancements
-- Added regression coverage for sequence-valued headers, conflicting security headers, cookie redaction, and scalar-header compatibility.
-- Standardized package metadata and runtime version to `1.0.2`.
-
-All analysis remains offline-only and treats configuration findings as contextual review leads rather than automatic vulnerability claims.
-
 ## 0.5.0 — Security-header ambiguity review
 
-This release adds a cautious review lead for conflicting values in security-sensitive HTTP response headers such as Content-Security-Policy, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and CORS headers.
+This release adds cautious review leads for conflicting security-sensitive HTTP response headers. The rule is offline-only and contextual.
