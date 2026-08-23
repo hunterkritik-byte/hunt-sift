@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hunt-sift"
-version = "1.2.0"
+version = "1.4.0"
 description = "Offline-only security artifact analysis workbench for authorized research workflows."
 readme = "README.md"
 requires-python = ">=3.10"
