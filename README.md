@@ -1,19 +1,49 @@
 # Hunt Sift
 
-> **Hunt Sift is an offline-only artifact-review tool for authorized security research.** It reads files you explicitly provide and returns careful review leads. It never scans hosts, sends requests, executes files, replays traffic, performs target discovery, generates payloads, or stores credentials.
+> **Hunt Sift is an offline-only artifact-review workbench for authorized security research.** It reads files you explicitly provide and returns careful review leads. It never scans hosts, sends requests, executes files, replays traffic, performs target discovery, or stores credentials.
+
+<p align="center">
+  <img src="./docs/assets/hunt-sift.gif" alt="Animated Hunt Sift workbench demo" width="720">
+</p>
+
+## Workbench at a glance
+
+| Area | Local capability |
+| --- | --- |
+| HTTP | Raw response and request review, security-header and authorization-sensitive cues |
+| Burp / HAR | Analyze saved exports without opening Burp or replaying captured traffic |
+| Source / JS | Conservative non-executing security-pattern review |
+| Nmap | Review previously exported XML service inventory |
+| Cloud policy | Review saved S3-style policy JSON |
+| Workspace | Inventory local cases and fingerprint artifacts with SHA-256 |
+| Reporting | Deduplicate findings and export JSON or SARIF for local workflows |
 
 ## What it accepts
 
 | Command | Local input | What it does |
 | --- | --- | --- |
 | `hunt-sift nmap` | Previously exported Nmap XML | Summarizes open-service inventory cues and flags legacy-service or transport-review leads. |
-| `hunt-sift burp` | Previously exported Burp Suite XML | Reads saved response metadata from an export and applies the same cautious local header-review rules. |
+| `hunt-sift burp` | Previously exported Burp Suite XML | Reads saved response metadata from an export and applies cautious local header-review rules. |
 | `hunt-sift har` | A saved HTTP Archive (HAR) file | Reviews saved response headers and status metadata from local HAR entries. |
 | `hunt-sift http` | A saved raw HTTP response | Reviews response-hardening, cookie-attribute, CORS, and technology-metadata cues. |
-| `hunt-sift static` | A local source file or directory | Finds a few non-executing code-review cues such as `eval`, `innerHTML`, `debug=true`, TODOs, and HTTP URLs. |
+| `hunt-sift request` | A saved raw HTTP request | Reviews BOLA/IDOR, injection-shaped input, mass-assignment, and disclosure cues. |
+| `hunt-sift source` | Local source / JavaScript | Performs conservative non-executing source-security checks. |
+| `hunt-sift inventory` | A local case directory | Indexes artifacts and records SHA-256 fingerprints. |
+| `hunt-sift report` | Saved Hunt Sift JSON findings | Produces a normalized JSON report or SARIF 2.1.0 document. |
 | `hunt-sift boundaries` | No input | Prints the tool's offline-only operating limits. |
 
 Every result is a **review lead**, not a vulnerability assertion. Confirm written authorization, actual reachability, data flow, impact, and the target program's reporting rules before taking any further action.
+
+## Reporting workflow
+
+Generate structured findings from a local artifact, then export them for a code-review or CI dashboard:
+
+```bash
+hunt-sift --json request --input ./case/request.txt > findings.json
+hunt-sift report --input findings.json --output ./case/report.sarif --format sarif
+```
+
+The SARIF exporter preserves the offline-review boundary and marks findings as local review leads. It does not add network behavior or automatic exploitation.
 
 ## Install
 
@@ -41,25 +71,26 @@ Review a saved raw HTTP response without connecting to the URL.
 hunt-sift http --input ./exports/response.txt --url https://app.example.test
 ```
 
-Review an exported Burp Suite XML file. Hunt Sift does not open Burp Suite or replay the captured traffic.
+Review a saved raw HTTP request:
 
 ```bash
-hunt-sift burp --input ./exports/captured-items.xml
-```
-
-Review a local HAR file. Query strings and fragments are removed from the output labels.
-
-```bash
-hunt-sift har --input ./exports/captured-session.har
+hunt-sift request --input ./exports/request.txt
 ```
 
 Inspect selected local source files without executing them.
 
 ```bash
-hunt-sift static --input ./source-export
+hunt-sift source --input ./source-export
 ```
 
-Use `--json` before the command for structured local results.
+Build and search a local workspace index:
+
+```bash
+hunt-sift inventory --input ./case --output ./case/inventory.json
+hunt-sift search --input ./case/inventory.json --query javascript
+```
+
+Use `--json` before a command for structured local findings.
 
 ```bash
 hunt-sift --json http --input ./exports/response.txt
@@ -83,7 +114,7 @@ The committed [sample analysis report](./docs/SAMPLE_ANALYSIS_REPORT.md) shows B
 
 The release setup is explained in [`docs/RELEASE.md`](./docs/RELEASE.md). The optional static cyber-neon preview is available in [`docs/preview/index.html`](./docs/preview/index.html); it can be opened directly from the repository or served from the `docs/preview` folder locally.
 
-Release notes are maintained in [`CHANGELOG.md`](./CHANGELOG.md). The current feature release is **0.2.0**.
+Release notes are maintained in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Security
 
