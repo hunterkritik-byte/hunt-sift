@@ -27,20 +27,30 @@ def index_directory(root: str | Path, max_bytes: int = 5_000_000) -> list[Artifa
     if not base.is_dir():
         raise ValueError(f"Workspace must be a local directory: {base}")
     records: list[ArtifactRecord] = []
+    ignored = {".git", ".venv", "__pycache__", "node_modules"}
     for path in sorted(p for p in base.rglob("*") if p.is_file()):
-        if any(part in {".git", ".venv", "__pycache__", "node_modules"} for part in path.parts):
+        if any(part in ignored for part in path.parts):
             continue
         size = path.stat().st_size
         if size > max_bytes:
             continue
-        records.append(ArtifactRecord(str(path.relative_to(base)), classify(path), size, hashlib.sha256(path.read_bytes()).hexdigest()))
+        records.append(
+            ArtifactRecord(
+                str(path.relative_to(base)),
+                classify(path),
+                size,
+                hashlib.sha256(path.read_bytes()).hexdigest(),
+            )
+        )
     return records
 
 
 def search_records(records: list[ArtifactRecord], query: str) -> list[ArtifactRecord]:
+    """Search only indexed metadata; file contents are never executed."""
     needle = query.casefold()
     return [r for r in records if needle in r.path.casefold() or needle in r.kind.casefold()]
 
 
 def write_index(records: list[ArtifactRecord], output: str | Path) -> None:
+    """Write a portable JSON evidence index."""
     Path(output).write_text(json.dumps([asdict(r) for r in records], indent=2), encoding="utf-8")
