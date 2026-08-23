@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
+from .core.models import Lead
 from .core.render import render_leads
+from .core.reporting import write_json, write_sarif
 from .core.request_review import analyze_request, safe_test_templates
 from .core.source_review import analyze_source
 from .core.workspace import index_directory, write_index
@@ -22,10 +24,22 @@ def local_path(value: str) -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="hunt-sift", description="Offline security workbench for researcher-supplied artifacts. No scanning, replay, execution, or network access.")
+    parser = argparse.ArgumentParser(
+        prog="hunt-sift",
+        description="Offline security workbench for researcher-supplied artifacts. No scanning, replay, execution, or network access.",
+    )
     parser.add_argument("--json", action="store_true", help="Print structured JSON where supported.")
-    commands = parser.add_subparsers(dest="command", required=True)
-    for name, help_text in (("nmap", "Analyze a previously exported Nmap XML file."),("burp", "Analyze a previously exported Burp Suite XML file."),("har", "Analyze a previously saved HTTP Archive (HAR) file."),("http", "Analyze a previously saved raw HTTP response."),("request", "Analyze a previously saved raw HTTP request."),("s3", "Analyze a previously exported S3-style bucket policy JSON file."),("static", "Review local source with non-executing pattern checks."),("source", "Analyze source or JavaScript with non-executing security rules.")):
+    commands = commands = parser.add_subparsers(dest="command", required=True)
+    for name, help_text in (
+        ("nmap", "Analyze a previously exported Nmap XML file."),
+        ("burp", "Analyze a previously exported Burp Suite XML file."),
+        ("har", "Analyze a previously saved HTTP Archive (HAR) file."),
+        ("http", "Analyze a previously saved raw HTTP response."),
+        ("request", "Analyze a previously saved raw HTTP request."),
+        ("s3", "Analyze a previously exported S3-style bucket policy JSON file."),
+        ("static", "Review local source with non-executing pattern checks."),
+        ("source", "Analyze source or JavaScript with non-executing security rules."),
+    ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--input", required=True, type=local_path)
         if name == "http":
@@ -38,8 +52,27 @@ def build_parser() -> argparse.ArgumentParser:
     search = commands.add_parser("search", help="Search a previously generated local inventory JSON file.")
     search.add_argument("--input", required=True, type=local_path)
     search.add_argument("--query", required=True)
+    report = commands.add_parser("report", help="Convert a saved Hunt Sift JSON finding list into a JSON report or SARIF.")
+    report.add_argument("--input", required=True, type=local_path)
+    report.add_argument("--output", required=True, help="Destination report path.")
+    report.add_argument("--format", choices=("json", "sarif"), default="json")
     commands.add_parser("boundaries", help="Print the tool's safety and authorization boundaries.")
     return parser
+
+
+def load_leads(path: Path) -> list[Lead]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("Finding JSON must contain a list")
+    leads: list[Lead] = []
+    for row in payload:
+        if not isinstance(row, dict):
+            continue
+        required = ("source", "category", "severity", "message", "evidence", "guidance")
+        if not all(key in row for key in required):
+            raise ValueError("Each finding must contain source, category, severity, message, evidence, and guidance")
+        leads.append(Lead(*(str(row[key]) for key in required)))
+    return leads
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -60,6 +93,14 @@ def main(argv: list[str] | None = None) -> int:
             needle = args.query.casefold()
             rows = [row for row in data if needle in str(row.get("path", "")).casefold() or needle in str(row.get("kind", "")).casefold()]
             print(json.dumps(rows, indent=2) if args.json else "\n".join(f"{row.get('kind','other'):12} {row.get('path','')}" for row in rows) or "No matching artifacts.")
+            return 0
+        if args.command == "report":
+            leads = load_leads(args.input)
+            if args.format == "sarif":
+                write_sarif(args.output, leads)
+            else:
+                write_json(args.output, leads)
+            print(f"Wrote {args.format} report with {len(leads)} local review leads to {args.output}.")
             return 0
         if args.command == "request":
             leads = analyze_request(read_text(args.input))
