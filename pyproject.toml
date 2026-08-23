@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hunt-sift"
-version = "1.0.2"
-description = "Offline-only security artifact analysis for authorized research workflows."
+version = "1.1.0"
+description = "Offline-only security artifact analysis workbench for authorized research workflows."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -19,5 +19,5 @@ classifiers = [
 [project.scripts]
 hunt-sift = "hunt_sift.cli:main"
 
-[tool.setuptools]
-packages = ["hunt_sift"]
+[tool.setuptools.packages.find]
+include = ["hunt_sift*"]
