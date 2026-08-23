@@ -56,6 +56,20 @@ class AnalyzerTests(unittest.TestCase):
             self.assertIn("cors-credentials-policy-review", categories)
             self.assertTrue(all("account=masked" not in lead.evidence for lead in leads))
 
+    def test_conflicting_security_headers_are_reviewed_and_redacted(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            response = Path(tempdir) / "response.txt"
+            response.write_text(
+                "HTTP/1.1 200 OK\nContent-Security-Policy: default-src 'self'\nContent-Security-Policy: default-src *\n\nbody",
+                encoding="utf-8",
+            )
+            leads = analyze_http_export(response, "https://app.example.test")
+            matches = [lead for lead in leads if lead.category == "conflicting-security-header-review"]
+            self.assertEqual(len(matches), 1)
+            self.assertIn("content-security-policy", matches[0].message)
+            self.assertNotIn("default-src", matches[0].evidence)
+            self.assertIn("2 distinct values redacted", matches[0].evidence)
+
     def test_static_review_never_executes_source(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             source = Path(tempdir) / "app.js"
