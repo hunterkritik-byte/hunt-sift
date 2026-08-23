@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 — Security-header ambiguity review
+
+This release adds a cautious review lead for conflicting values in security-sensitive HTTP response headers such as Content-Security-Policy, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and CORS headers. The rule is offline-only, redacts header values from evidence, and treats ambiguity as a review prompt rather than a confirmed vulnerability. Tests cover detection and redaction.
+
 ## 0.4.0 — Offline policy review and release preparation
 
 This release adds local static-source review cues for JWT decode, expiration, and `none` algorithm configurations, plus a redacted `jwt_secret` pattern. The new `s3` command analyzes only a supplied S3-style JSON policy and emits careful wildcard-principal read/write configuration leads without any cloud API activity. It also includes a validated reusable offline-security development skill, a tag-gated GitHub Actions build/release workflow with PyPI trusted publishing, and cyber-neon HTML previews for the manual and Burp/HAR sample report.
