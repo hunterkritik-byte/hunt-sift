@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — Request and source security review
+
+### Enhancements
+- Added offline raw HTTP request analysis for IDOR/BOLA review, SQL/NoSQL injection indicators, mass-assignment review, and information-disclosure review.
+- Added non-executing JavaScript/source review for dangerous dynamic-code sinks, DOM HTML sinks, postMessage handling, hardcoded-secret patterns, prototype-pollution-sensitive properties, and client-side API request surfaces.
+- Added inert manual-review templates that provide methodology without sending requests or generating ready-to-run exploit payloads.
+- Added regression tests for request and source analysis.
+- Added `request`, `source`, and `test-templates` CLI commands.
+
+The tool remains offline-only. Findings are contextual review leads, not automatic vulnerability claims.
+
 ## 1.1.0 — Offline security workbench
 
 ### Enhancements
