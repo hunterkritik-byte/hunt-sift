@@ -1,6 +1,7 @@
 """Hunt Sift CLI: an offline security-research workbench."""
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from .core.models import Lead
@@ -21,9 +22,14 @@ from .core.endpoint_map import endpoint_dicts
 from .core.parameter_miner import mine_parameters
 from .parsers import burp_xml, har, http_export, nmap_xml, s3_policy, static_files
 
+MAX_FINDINGS = 10_000
+MAX_FINDING_FIELD_BYTES = 20_000
+
 
 def local_path(value: str) -> Path:
     path = Path(value).expanduser().resolve()
+    if path.is_symlink():
+        raise argparse.ArgumentTypeError(f"Refusing to follow symbolic link: {path}")
     if not path.exists():
         raise argparse.ArgumentTypeError(f"Local input does not exist: {path}")
     return path
@@ -58,21 +64,47 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _field(value: object, name: str) -> str:
+    text = str(value)
+    if len(text.encode("utf-8")) > MAX_FINDING_FIELD_BYTES:
+        raise ValueError(f"Finding field '{name}' exceeds the {MAX_FINDING_FIELD_BYTES:,}-byte limit")
+    return text
+
+
 def load_leads(path: Path) -> list[Lead]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict) and isinstance(payload.get("findings"), list):
         payload = payload["findings"]
     if not isinstance(payload, list):
         raise ValueError("Finding JSON must contain a list or a report object with a findings list")
+    if len(payload) > MAX_FINDINGS:
+        raise ValueError(f"Finding JSON contains {len(payload):,} entries; limit is {MAX_FINDINGS:,}")
     leads = []
+    required = ("source", "category", "severity", "message", "evidence", "guidance")
     for row in payload:
         if not isinstance(row, dict):
             continue
-        required = ("source", "category", "severity", "message", "evidence", "guidance")
         if not all(k in row for k in required):
             raise ValueError("Each finding must contain source, category, severity, message, evidence, and guidance")
-        leads.append(Lead(*(str(row[k]) for k in required)))
+        leads.append(Lead(*(_field(row[k], k) for k in required)))
     return leads
+
+
+def lead_key(lead: Lead) -> str:
+    material = "\x1f".join((lead.category, lead.severity, lead.message, lead.evidence, lead.guidance))
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def deduplicate(leads: list[Lead]) -> list[Lead]:
+    """Remove exact duplicate review leads deterministically while preserving order."""
+    seen: set[str] = set()
+    result: list[Lead] = []
+    for lead in leads:
+        key = lead_key(lead)
+        if key not in seen:
+            seen.add(key)
+            result.append(lead)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,13 +118,13 @@ def main(argv: list[str] | None = None) -> int:
             rows = [r for r in data if needle in str(r.get("path", "")).casefold() or needle in str(r.get("kind", "")).casefold()]
             print(json.dumps(rows, indent=2) if args.json else "\n".join(f"{r.get('kind','other'):12} {r.get('path','')}" for r in rows) or "No matching artifacts."); return 0
         if args.command == "report":
-            leads = load_leads(args.input)
+            leads = deduplicate(load_leads(args.input))
             if args.format == "sarif": write_sarif(args.output, leads)
             elif args.format == "html": write_html(args.output, leads)
             else: write_json(args.output, leads)
             print(f"Wrote {args.format} report with {len(leads)} local review leads to {args.output}."); return 0
         if args.command == "triage":
-            leads = load_leads(args.input); rows = prioritize(leads); summary = triage_summary(leads)
+            leads = deduplicate(load_leads(args.input)); rows = prioritize(leads); summary = triage_summary(leads)
             payload = {"summary": summary, "findings": rows}
             print(json.dumps(payload, indent=2) if args.json else "\n".join(f"P{r['priority']}  {r['lead']['category']}: {r['lead']['message']}" for r in rows) or "No findings to triage."); return 0
         if args.command == "diff":
