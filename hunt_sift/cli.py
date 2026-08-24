@@ -27,9 +27,10 @@ MAX_FINDING_FIELD_BYTES = 20_000
 
 
 def local_path(value: str) -> Path:
-    path = Path(value).expanduser().resolve()
-    if path.is_symlink():
-        raise argparse.ArgumentTypeError(f"Refusing to follow symbolic link: {path}")
+    raw = Path(value).expanduser()
+    if raw.is_symlink():
+        raise argparse.ArgumentTypeError(f"Refusing to follow symbolic link: {raw}")
+    path = raw.resolve()
     if not path.exists():
         raise argparse.ArgumentTypeError(f"Local input does not exist: {path}")
     return path
