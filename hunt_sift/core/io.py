@@ -1,4 +1,4 @@
-"""Bounded local file access helpers.
+"""Bounded, symlink-safe local file access helpers.
 
 No function in this module initiates network activity, executes a file, or follows a live URL.
 """
@@ -15,7 +15,13 @@ SKIPPED_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".zip", ".w
 
 
 def read_text(path: Path, limit: int = MAX_INPUT_BYTES) -> str:
-    """Read a selected local text file with a hard size cap."""
+    """Read a selected local text file with a hard size cap.
+
+    Symlinks are rejected so a case path cannot silently redirect analysis to a
+    different filesystem location.
+    """
+    if path.is_symlink():
+        raise ValueError(f"Refusing to follow symbolic link: {path}")
     if not path.is_file():
         raise ValueError(f"Input must be a local file: {path}")
     if path.stat().st_size > limit:
@@ -24,37 +30,30 @@ def read_text(path: Path, limit: int = MAX_INPUT_BYTES) -> str:
 
 
 def iter_local_text_files(path: Path, max_depth: int = MAX_DIRECTORY_DEPTH) -> Iterable[Path]:
-    """Yield selected local text files while excluding common generated or binary locations.
-    
-    Args:
-        path: File or directory to analyze.
-        max_depth: Maximum directory depth to traverse. Prevents runaway recursion on deep trees.
-    """
+    """Yield selected local text files without traversing symbolic links."""
+    if path.is_symlink():
+        raise ValueError(f"Refusing to traverse symbolic link: {path}")
     if path.is_file():
         yield path
         return
     if not path.is_dir():
         raise ValueError(f"Input must be a local file or directory: {path}")
-    
-    # Use a queue-based approach with explicit depth tracking for better control
+
     queue = [(path, 0)]
     while queue:
         current, depth = queue.pop(0)
         if depth > max_depth:
             continue
-        
         try:
             for candidate in current.iterdir():
-                # Check if any part of the path matches a skipped directory
+                if candidate.is_symlink():
+                    continue
                 if any(part in SKIPPED_DIRECTORIES for part in candidate.parts):
                     continue
-                
                 if candidate.is_file():
-                    if candidate.suffix.lower() not in SKIPPED_SUFFIXES:
-                        if candidate.stat().st_size <= MAX_INPUT_BYTES:
-                            yield candidate
+                    if candidate.suffix.lower() not in SKIPPED_SUFFIXES and candidate.stat().st_size <= MAX_INPUT_BYTES:
+                        yield candidate
                 elif candidate.is_dir():
                     queue.append((candidate, depth + 1))
         except (OSError, PermissionError):
-            # Skip directories we can't read
             continue
