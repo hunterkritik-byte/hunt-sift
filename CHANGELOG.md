@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.1.24 — Input hardening and deterministic finding hygiene
+
+### Security fixes
+- Fixed a local-artifact traversal weakness where directory indexing could follow symbolic links into locations outside the selected case tree.
+- CLI path validation now rejects symlink inputs before path resolution.
+- Finding/report ingestion now caps the number and size of imported finding fields to reduce resource-exhaustion risk from malformed local report files.
+
+### Enhancements
+- Added deterministic exact-duplicate finding removal for `triage` and `report` workflows.
+- Duplicate removal preserves first-seen order and uses SHA-256 only as an in-memory identity key; no sensitive values are emitted by the deduplication feature.
+- Bumped package and runtime version to `2.1.24`.
+
+### Validation
+- Added regression coverage for symlink rejection, finding-size limits, finding-count limits, and deterministic deduplication.
+
+Hunt Sift remains offline-only: these changes do not add scanning, request replay, network access, source execution, credential storage, or automatic exploitation.
+
 ## 2.1.23 — Explainable triage and offline reporting
 
 ### Enhancements
