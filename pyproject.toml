@@ -18,6 +18,7 @@ classifiers = [
 
 [project.scripts]
 hunt-sift = "hunt_sift.cli:main"
+hunt-sift-digest = "tools.case_digest:main"
 
 [tool.setuptools.packages.find]
 include = ["hunt_sift*"]
