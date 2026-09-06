@@ -17,8 +17,9 @@
 | Workspace | Inventory local cases and SHA-256 artifact fingerprints |
 | Reporting | JSON, SARIF 2.1.0 and self-contained HTML reports |
 | Triage | Deterministic, explainable priority scoring |
+| Case digest | Metadata-only severity/category summaries for sharing |
 
-## 2.1.23 highlights
+## 2.1.24 highlights
 
 ### 🧭 Explainable triage
 
@@ -38,7 +39,21 @@ The report is generated locally, escapes HTML content, shows priority bands, and
 
 ### 🔁 Report round-trip
 
-`report` can now consume either a raw finding list or the normalized JSON report produced by Hunt Sift.
+`report` can consume either a raw finding list or the normalized JSON report produced by Hunt Sift.
+
+### 🧾 Redacted case digest
+
+The new `tools/case_digest.py` helper produces shareable metadata without printing finding evidence:
+
+```bash
+python3 tools/case_digest.py ./case/findings.json
+```
+
+It reports counts by category and severity while intentionally omitting finding messages and evidence.
+
+### 🧮 Baseline helper
+
+`hunt_sift.core.baseline.baseline()` provides deterministic category/severity counts for tests and local dashboards without retaining raw evidence.
 
 ## Commands
 
